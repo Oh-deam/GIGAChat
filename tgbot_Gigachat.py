@@ -60,8 +60,6 @@ messages = {}
 
 bot = telebot.TeleBot("6771849352:AAFiFk-Ri4E9oVYkRdSFkCO4ge329kczfmI")
 
-db = sql.connect('task_manager_data.db', check_same_thread=False)
-cursor = db.cursor()
 
 
 @bot.message_handler(content_types=['text'])
@@ -95,10 +93,9 @@ def get_text_messages(got_message):
                 if len(user_tasks) == 0:
                    pass
                 else:
-                    new_user_tasks = user_tasks[0][0] + ';' + task
+                    #new_user_tasks = user_tasks[0][0] + ';' + task
                     # cursor.execute(f"""UPDATE users_data SET tasks = '{new_user_tasks}' WHERE id = '{user_id}'""")
-
-                db.commit()
+                    pass
                 bot.send_message(user_id, 'Задачи успешно добавлены')
 
             except Exception as e:
@@ -111,12 +108,12 @@ def get_text_messages(got_message):
         # cursor.execute(f"""
         # DELETE from users_data WHERE id = '{user_id}'
         # """)
-        db.commit()
+        
         bot.send_message(user_id, 'Задачи успешно удалены!')
 
     elif got_message.text == '/update_subscribe' :
         # cursor.execute(f"""UPDATE users SET subscribe = 1 WHERE id = '{user_id}'""")
-        db.commit()
+        
         bot.send_message(user_id, 'Ваша подписка успешно оформлена!')
     
     elif got_message.text == '/make_gant':
