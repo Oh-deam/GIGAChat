@@ -7,13 +7,11 @@ from langchain.schema import HumanMessage, SystemMessage
 from langchain.chat_models.gigachat import GigaChat
 
 
-def is_user_in_db(id: int) -> bool: #Проверка, есть ли пользователь в БД
-    print(f'ID in fun {id}')
-    data = cursor.execute(f"""SELECT * FROM users WHERE id='{id}'""").fetchall()
-    if len(data) != 0:
-        return True
-    else:
-        return False
+def is_user_in_db(user_id):
+    pass
+
+def check_avilable_create(user_id):
+    pass
 
 def is_quastion_about_tasks(message: str) -> bool: #Вопрос к нейросети, чтобы она определила, является ли вопрос похожим на вопрос к таск-менедж. 
     quastion = f'"{message}". Это похоже на вопрос для таск менеджера? Ответь да или нет' 
@@ -28,23 +26,6 @@ def is_quastion_about_tasks(message: str) -> bool: #Вопрос к нейрос
     else:
         return False
     
-def check_avilable_create(id: int) -> bool: #Проверка доступности добавления задач (для user без подписки 6 задач (задачи делятся ;))
-    info = cursor.execute(f'''
-    SELECT tasks, subscribe
-    FROM users_data 
-    INNER JOIN users
-    ON users.id = users_data.id
-    WHERE users.id = {id}
-''').fetchall()
-
-    if len(info) == 0:
-        return True
-    elif info[0][0] == '':
-        return True
-    elif info[0][-1] == 0 and info[0][0].count(';') >= 6:
-        return False
-    else:
-        return True
     
 def make_Gant(data): #Функция для создания диаргаммы Ганта (хз нужна она или нет), но просто делать было нехуй
     print(f'in make_gant : {data}')
@@ -81,17 +62,6 @@ bot = telebot.TeleBot("6771849352:AAFiFk-Ri4E9oVYkRdSFkCO4ge329kczfmI")
 
 db = sql.connect('task_manager_data.db', check_same_thread=False)
 cursor = db.cursor()
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users_data (
-                id INTEGER,
-                tasks TEXT NOT NULL
-    )''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-               id INTEGER,
-               subscribe BLOB
-    )''')
 
 
 @bot.message_handler(content_types=['text'])
@@ -117,20 +87,16 @@ def get_text_messages(got_message):
         if is_user_in_db(user_id):
             pass
         else:
-            cursor.execute(f"""INSERT INTO users (id, subscribe) VALUES ('{user_id}', {0})""")
-            db.commit()
+            pass
 
         if check_avilable_create(user_id):
             try:
-                user_tasks = cursor.execute(f"""SELECT tasks FROM users_data WHERE id = '{user_id}'""").fetchall()
+                user_tasks = ""
                 if len(user_tasks) == 0:
-                    cursor.execute(f"""INSERT INTO users_data (id, tasks) VALUES ('{user_id}', '{task}')""")
+                   pass
                 else:
-                    #print(user_tasks[0][0])
-                    #print(type(user_tasks[0][0]))
                     new_user_tasks = user_tasks[0][0] + ';' + task
-                    cursor.execute(f"""UPDATE users_data SET tasks = '{new_user_tasks}' WHERE id = '{user_id}'""")
-                #cursor.execute(f"""INSERT INTO users_data (id, tasks) VALUES ('{user_id}', '{task}')""")
+                    # cursor.execute(f"""UPDATE users_data SET tasks = '{new_user_tasks}' WHERE id = '{user_id}'""")
 
                 db.commit()
                 bot.send_message(user_id, 'Задачи успешно добавлены')
@@ -142,19 +108,20 @@ def get_text_messages(got_message):
             bot.send_message(user_id, 'Закончились свободные слоты для задач по вашей подписке')
         
     elif got_message.text == '/del_task_manager':
-        cursor.execute(f"""
-        DELETE from users_data WHERE id = '{user_id}'
-        """)
+        # cursor.execute(f"""
+        # DELETE from users_data WHERE id = '{user_id}'
+        # """)
         db.commit()
         bot.send_message(user_id, 'Задачи успешно удалены!')
 
     elif got_message.text == '/update_subscribe' :
-        cursor.execute(f"""UPDATE users SET subscribe = 1 WHERE id = '{user_id}'""")
+        # cursor.execute(f"""UPDATE users SET subscribe = 1 WHERE id = '{user_id}'""")
         db.commit()
         bot.send_message(user_id, 'Ваша подписка успешно оформлена!')
     
     elif got_message.text == '/make_gant':
-        user_tasks = cursor.execute(f"""SELECT tasks FROM users_data WHERE id = '{user_id}'""").fetchall()
+        user_tasks = ""
+        # cursor.execute(f"""SELECT tasks FROM users_data WHERE id = '{user_id}'""").fetchall()
         if len(user_tasks) == 0:
             bot.send_message(user_id, 'У вас еще нет добавленных задач!')
         else:     
@@ -164,26 +131,20 @@ def get_text_messages(got_message):
     
     else:
         if is_quastion_about_tasks(got_message.text):
-            #print('user id =', user_id)
-            request_from_db = cursor.execute(f'SELECT tasks FROM users_data WHERE id = {user_id}').fetchall()
+            request_from_db = ""
+            # cursor.execute(f'SELECT tasks FROM users_data WHERE id = {user_id}').fetchall()
             if len(request_from_db) == 0:
                 bot.send_message(user_id, 'У вас нет ни одной добавленной задачи')
             else:
-                #users_tasks = cursor.execute(f'SELECT tasks FROM users_data WHERE id = {user_id}').fetchall()[0][0].replace(';', '\n')
                 user_tasks = request_from_db[0][0].replace(';', '\n')
-                #print(got_message.text)
                 quastion = f'Передо мной стоят задачи: {user_tasks}\n {got_message.text}'
 
                 if user_id in messages:
-                    #print('user id in dict')
                     messages[user_id].append(HumanMessage(content=quastion))
                 else:
-                    #print('user id is not in dict')
                     messages[user_id] = [systemmessage]
                     messages[user_id].append(HumanMessage(content=quastion)) #messages[user_id] = 
                 
-                #print(type(messages[user_id]))
-                #print(messages[user_id])
                 res = chat(messages[user_id]).content
                 bot.send_message(got_message.from_user.id, res)
         else:
@@ -194,9 +155,7 @@ def get_text_messages(got_message):
                 else:
                     messages[user_id] = [systemmessage]
                     messages[user_id].append(HumanMessage(content=quastion))
-                    #messages.append(HumanMessage(content=got_message.text))
                 res = chat(messages[user_id])
-                #print(res.content)
                 bot.send_message(got_message.from_user.id, res.content)
             except Exception as e:
                 print(e)
